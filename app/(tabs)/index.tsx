@@ -1,6 +1,17 @@
+import * as Crypto from 'expo-crypto';
+import { Link } from "expo-router";
 import * as SQLite from "expo-sqlite";
 import { useState } from 'react';
 import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+// hashing password function found at https://docs.expo.dev/versions/latest/sdk/crypto/ 
+async function hashPassword(password: string): Promise<string> {
+  const hashed = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    password
+  );
+  return hashed;
+}
 
 export default function SignUpScreen() {
   const [form, setForm] = useState({
@@ -10,18 +21,17 @@ export default function SignUpScreen() {
     password: ''
   });
 
+  const db = SQLite.useSQLiteContext();
+
+  // This function will run all the logic that stores the information in the database.
   const handleSubmit = async () => {
-    const db = await SQLite.openDatabaseAsync('usersDatabase');
-    await db.execAsync(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, firstName TEXT NOT NULL, lastName TEXT NOT NULL, email TEXT NOT NULL, password TEXT NOT NULL);
-      `);
     try {
       if (!form.firstName || !form.lastName || !form.email || !form.password) {
         throw new Error('All fields are required');
       }
+      // Test case to make sure email isn't already in use.
       const existingUser = await db.getFirstAsync('SELECT email FROM users WHERE email = ?;', [form.email]);
-      if(existingUser) {
+      if (existingUser) {
         setForm({
           firstName: '',
           lastName: '',
@@ -30,9 +40,13 @@ export default function SignUpScreen() {
         });
         throw new Error('Email already in use. Please enter a different email.')
       }
+      // hash password for safety
+      const hashedPassword = await hashPassword(form.password);
+      console.log(hashPassword);
+      // Get information from form and store it in database.
       await db.runAsync(
         'INSERT INTO users (firstName, lastName, email, password) VALUES (?, ?, ?, ?)',
-        [form.firstName, form.lastName, form.email, form.password]
+        [form.firstName, form.lastName, form.email, hashedPassword]
       );
 
       Alert.alert('Success', 'User added successfully!');
@@ -44,7 +58,7 @@ export default function SignUpScreen() {
       });
     } catch (error) {
       console.log(error)
-      Alert.alert('Error', 'An error occurred while adding the user.');
+      Alert.alert('' + error);
     }
   };
 
@@ -98,10 +112,11 @@ export default function SignUpScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      {/* TO DO ADD ROUTER TO ANOTHER PAGE */}
-      <Text style={styles.footerText}>
-        Already have an account? <Text style={styles.footerLink}>Log in</Text>
-      </Text>
+      <Link href="/Login" asChild>
+        <TouchableOpacity>
+        <Text style={styles.footerText}>Already have an account?<Text style={styles.footerLink}> Log in</Text></Text>
+        </TouchableOpacity>
+      </Link>
     </SafeAreaView>
   );
 }

@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/constante/CST334-assignments/labs/lab0-intro_to_c",
+      "program": "/Users/constante/CST334-assignments/labs/lab0-intro_to_c/build/Debug/outDebug"
+    }
+  ]
+}
