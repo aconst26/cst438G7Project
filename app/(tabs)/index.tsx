@@ -1,25 +1,65 @@
+import * as Crypto from 'expo-crypto';
+import { Link } from "expo-router";
+import * as SQLite from "expo-sqlite";
 import { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-    // const db = await SQLite.openDatabaseAsync('usersDatabase');
-
-    // await db.execAsync(`
-    //   PRAGMA journal_mode = WAL;
-    //   CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, firstName TEXT NOT NULL, lastName TEXT NOT NULL, email TEXT NOT NULL, password TEXT NOT NULL);`);
-
+// hashing password function found at https://docs.expo.dev/versions/latest/sdk/crypto/ 
+async function hashPassword(password: string): Promise<string> {
+  const hashed = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    password
+  );
+  return hashed;
+}
 
 export default function SignUpScreen() {
-  const [fname, setFname] = useState('');
-  const [lname, setLname] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: ''
+  });
 
+  const db = SQLite.useSQLiteContext();
 
-  const handleSignUp = async () => {
-    console.log('Sign Up:', { fname, lname, email, password });
+  // This function will run all the logic that stores the information in the database.
+  const handleSubmit = async () => {
+    try {
+      if (!form.firstName || !form.lastName || !form.email || !form.password) {
+        throw new Error('All fields are required');
+      }
+      // Test case to make sure email isn't already in use.
+      const existingUser = await db.getFirstAsync('SELECT email FROM users WHERE email = ?;', [form.email]);
+      if (existingUser) {
+        setForm({
+          firstName: '',
+          lastName: '',
+          email: '',
+          password: ''
+        });
+        throw new Error('Email already in use. Please enter a different email.')
+      }
+      // hash password for safety
+      const hashedPassword = await hashPassword(form.password);
+      console.log(hashPassword);
+      // Get information from form and store it in database.
+      await db.runAsync(
+        'INSERT INTO users (firstName, lastName, email, password) VALUES (?, ?, ?, ?)',
+        [form.firstName, form.lastName, form.email, hashedPassword]
+      );
 
-    //const result = await db.runAsync('INSERT INTO users (firstName, lastName, email, password) VALUES (?, ?, ?, ?)', fname, lname, email, password);
-    //console.log(result.lastInsertRowId, result.changes);
+      Alert.alert('Success', 'User added successfully!');
+      setForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: ''
+      });
+    } catch (error) {
+      console.log(error)
+      Alert.alert('' + error);
+    }
   };
 
   return (
@@ -33,8 +73,8 @@ export default function SignUpScreen() {
             <Text style={styles.label}>First Name</Text>
             <TextInput
               style={styles.input}
-              value={fname}
-              onChangeText={setFname}
+              value={form.firstName}
+              onChangeText={(text) => setForm({ ...form, firstName: text })}
             />
           </View>
 
@@ -42,8 +82,8 @@ export default function SignUpScreen() {
             <Text style={styles.label}>Last Name</Text>
             <TextInput
               style={styles.input}
-              value={lname}
-              onChangeText={setLname}
+              value={form.lastName}
+              onChangeText={(text) => setForm({ ...form, lastName: text })}
             />
           </View>
 
@@ -51,9 +91,9 @@ export default function SignUpScreen() {
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
-              value={email}
-              onChangeText={setEmail}
               keyboardType="email-address"
+              value={form.email}
+              onChangeText={(text) => setForm({ ...form, email: text })}
             />
           </View>
 
@@ -61,21 +101,22 @@ export default function SignUpScreen() {
             <Text style={styles.label}>Password</Text>
             <TextInput
               style={styles.input}
-              value={password}
-              onChangeText={setPassword}
               secureTextEntry
+              value={form.password}
+              onChangeText={(text) => setForm({ ...form, password: text })}
             />
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
             <Text style={styles.buttonText}>Sign Up</Text>
           </TouchableOpacity>
         </View>
       </View>
-      {/* TO DO ADD ROUTER TO ANOTHER PAGE */}
-      <Text style={styles.footerText}>
-        Already have an account? <Text style={styles.footerLink}>Log in</Text>
-      </Text>
+      <Link href="/Login" asChild>
+        <TouchableOpacity>
+        <Text style={styles.footerText}>Already have an account?<Text style={styles.footerLink}> Log in</Text></Text>
+        </TouchableOpacity>
+      </Link>
     </SafeAreaView>
   );
 }
@@ -83,7 +124,7 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0E2028', 
+    backgroundColor: '#0E2028',
     justifyContent: 'center',
     padding: 24,
   },
@@ -108,7 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     width: '90%',
-    maxWidth: 360, 
+    maxWidth: 360,
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 10,
