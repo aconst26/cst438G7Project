@@ -17,6 +17,7 @@ export default function SignUpScreen() {
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     password: ''
   });
@@ -35,6 +36,7 @@ export default function SignUpScreen() {
         setForm({
           firstName: '',
           lastName: '',
+          username: '',
           email: '',
           password: ''
         });
@@ -45,14 +47,15 @@ export default function SignUpScreen() {
       console.log(hashPassword);
       // Get information from form and store it in database.
       await db.runAsync(
-        'INSERT INTO users (firstName, lastName, email, password) VALUES (?, ?, ?, ?)',
-        [form.firstName, form.lastName, form.email, hashedPassword]
+        'INSERT INTO users (firstName, lastName, username, email, password) VALUES (?, ?, ?, ?, ?)',
+        [form.firstName, form.lastName, form.username, form.email, hashedPassword]
       );
 
       Alert.alert('Success', 'User added successfully!');
       setForm({
         firstName: '',
         lastName: '',
+        username: '',
         email: '',
         password: ''
       });
@@ -84,6 +87,15 @@ export default function SignUpScreen() {
               style={styles.input}
               value={form.lastName}
               onChangeText={(text) => setForm({ ...form, lastName: text })}
+            />
+          </View>
+
+          <View style ={styles.inputWrapper}>
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={styles.input}
+              value={form.username}
+              onChangeText={(text) => setForm({ ...form, username: text })}
             />
           </View>
 
