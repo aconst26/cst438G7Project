@@ -1,18 +1,49 @@
+import * as Crypto from 'expo-crypto';
+import * as SQLite from 'expo-sqlite';
+import {Link} from 'expo-router';
+import {router} from 'expo-router';
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+async function hashPassword(password: string): Promise<string> {
+    return await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        password
+    );
+}
+
 
 export default function Login() {
+    const db = SQLite.useSQLiteContext();
     const[username, setUsername] = useState('');
     const[password, setPassword] = useState('');
 
-    const handleLogin = () => {
-        console.log('Logging in with:', {username, password});
-    };
+    const handleLogin = async () => {
+        try {
+            if (!username || !password) {
+                Alert.alert('Error', 'Please enter both username and password.');
+                return;
+            }
+            const hashedPassword = await hashPassword(password);
 
-    const handleSignUp = () => {
-        console.log('Navigating to sign-up screen');
-    };
+            const user = await db.getFirstAsync(
+                'SELECT * FROM users WHERE username = ? AND password = ?;',
+                [username, hashedPassword]
+            );
 
+            if(!user) {
+                Alert.alert('Login Failed', 'Incorrect username or password.');
+                return;
+            }
+            console.log('Logged in user:', user);
+            setUsername('');
+            setPassword('');
+            router.replace('/explore');
+        } catch (error) {
+            console.error(error);
+            Alert.alert('Error', 'An error occurred during login. Please try again.');
+        }
+    };
 
     return (
     <SafeAreaView style={styles.container}>
@@ -46,9 +77,13 @@ export default function Login() {
         </View>
     </View>
 
+    <Link href="/" asChild>
+    <TouchableOpacity>
     <Text style={styles.footerText}>
-        Don’t have an account? <Text style={styles.footerLink} onPress={handleSignUp}>Sign up</Text>
+        Don’t have an account? <Text style={styles.footerLink}>Sign up</Text>
     </Text>
+    </TouchableOpacity>
+    </Link>
     </SafeAreaView>
   );
 }
