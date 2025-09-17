@@ -19,7 +19,7 @@ export default function SignUpScreen() {
     lastName: '',
     username: '',
     email: '',
-    password: ''
+    password: '',
   });
 
   const db = SQLite.useSQLiteContext();
@@ -38,7 +38,7 @@ export default function SignUpScreen() {
           lastName: '',
           username: '',
           email: '',
-          password: ''
+          password: '',
         });
         throw new Error('Email already in use. Please enter a different email.')
       }
@@ -47,8 +47,8 @@ export default function SignUpScreen() {
       console.log(hashPassword);
       // Get information from form and store it in database.
       await db.runAsync(
-        'INSERT INTO users (firstName, lastName, username, email, password) VALUES (?, ?, ?, ?, ?)',
-        [form.firstName, form.lastName, form.username, form.email, hashedPassword]
+        'INSERT INTO users (firstName, lastName, username, email, password, points) VALUES (?, ?, ?, ?, ?, ?)',
+        [form.firstName, form.lastName, form.username, form.email, hashedPassword, 0]
       );
 
       Alert.alert('Success', 'User added successfully!');
@@ -57,7 +57,7 @@ export default function SignUpScreen() {
         lastName: '',
         username: '',
         email: '',
-        password: ''
+        password: '',
       });
     } catch (error) {
       console.log(error)
