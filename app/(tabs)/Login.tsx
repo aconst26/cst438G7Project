@@ -1,7 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import * as SQLite from 'expo-sqlite';
-import {Link} from 'expo-router';
-import {router} from 'expo-router';
+import {Link, router} from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -35,6 +35,7 @@ export default function Login() {
                 Alert.alert('Login Failed', 'Incorrect username or password.');
                 return;
             }
+            await AsyncStorage.setItem('loggedInUser', username); // Store logged in user
             console.log('Logged in user:', user);
             setUsername('');
             setPassword('');
