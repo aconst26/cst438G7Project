@@ -1,11 +1,19 @@
+import { useRoute } from "@react-navigation/native";
 import { useEffect, useState } from 'react';
 import { Button, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 export default function QuizScreen() {
+  const { params } = useRoute();
+  const category = params?.category;
+  const difficulty = params?.difficulty;
+  const type = params?.type;
+  console.log(category);
+  console.log(difficulty);
+  console.log(type);
   // This is awesome this just automatically slaps these together and gives us a default value
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [graded, setGraded] = useState(false);
-  const [time, setTime] = useState(10);
+  const [time, setTime] = useState(60);
 
   const onClick = (index, ans) => {
     // Updates selected answers
@@ -35,7 +43,7 @@ export default function QuizScreen() {
 
   useEffect(() => {
     const fetchQuestion = async () => {
-      let questionResult = await fetch("https://opentdb.com/api.php?amount=3");
+      let questionResult = await fetch("https://opentdb.com/api.php?amount=3" + "&category=" + category + "&difficulty=" + difficulty + "&type=" + type);
       let items = await questionResult.json();
       console.log("API response:", items);
       setQuestions(items.results);
