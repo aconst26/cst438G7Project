@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { Link, router } from 'expo-router';
 import * as SQLite from 'expo-sqlite';
@@ -40,6 +41,8 @@ export default function Login() {
                 [username, hashedPassword]
             );
             console.log('Logged in user:', user2);
+            await AsyncStorage.setItem('loggedInUser', username); // Store logged in user
+            console.log('Logged in user:', user);
             setUsername('');
             setPassword('');
             router.replace('/explore');
