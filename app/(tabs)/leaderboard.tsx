@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { SafeAreaView, StyleSheet, Text, View, FlatList } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import * as SQLite from "expo-sqlite";
+import { useCallback, useState } from "react";
+import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 type User = { //Defines what user record will look like
   id: number;
@@ -12,20 +13,22 @@ export default function Leaderboards() {
   const [users, setUsers] = useState<User[]>([]);
   const db = SQLite.useSQLiteContext();
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const results = await db.getAllAsync<User>(
-          "SELECT id, username, points FROM users ORDER BY points DESC;" // load data sorted by points
-        );
-        setUsers(results);
-      } catch (err) {
-        console.log("Error loading leaderboard:", err);
-      }
-    };
-
-    loadData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      const loadData = async () => {
+        try {
+          const results = await db.getAllAsync<User>(
+            "SELECT id, username, points FROM users ORDER BY points DESC;"
+          );
+          setUsers(results);
+        } catch (err) {
+          console.log("Error loading leaderboard:", err);
+        }
+      };
+  
+      loadData();
+    }, [db])
+  );
 
   const renderItem = ({ item, index }: { item: User; index: number }) => (
     <View style={styles.row}>

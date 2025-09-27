@@ -47,8 +47,8 @@ export default function SignUpScreen() {
       console.log(hashPassword);
       // Get information from form and store it in database.
       await db.runAsync(
-        'INSERT INTO users (firstName, lastName, username, email, password, points) VALUES (?, ?, ?, ?, ?, ?)',
-        [form.firstName, form.lastName, form.username, form.email, hashedPassword, 0]
+        'INSERT INTO users (firstName, lastName, username, email, password, points, loggedIn) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [form.firstName, form.lastName, form.username, form.email, hashedPassword, 0, 0]
       );
 
       Alert.alert('Success', 'User added successfully!');
