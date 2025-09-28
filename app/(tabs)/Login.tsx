@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
+import { Link, router } from 'expo-router';
 import * as SQLite from 'expo-sqlite';
-import {Link, router} from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -35,6 +35,12 @@ export default function Login() {
                 Alert.alert('Login Failed', 'Incorrect username or password.');
                 return;
             }
+            await db.runAsync('UPDATE users SET loggedIn = ? WHERE username = ?;', [1, username]);
+            const user2 = await db.getFirstAsync(
+                'SELECT * FROM users WHERE username = ? AND password = ?;',
+                [username, hashedPassword]
+            );
+            console.log('Logged in user:', user2);
             await AsyncStorage.setItem('loggedInUser', username); // Store logged in user
             console.log('Logged in user:', user);
             setUsername('');

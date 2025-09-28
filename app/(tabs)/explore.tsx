@@ -1,88 +1,247 @@
-import { useEffect, useState } from 'react';
-import { Button, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import * as SQLite from 'expo-sqlite';
+import { useEffect, useState } from "react";
+import {
+  Button,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+
+// Simple decoder for OpenTDB entities 
+function decodeHTMLEntities(str: string) {
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function shuffleArray(array: string[]) {
+  return array
+    .map((a) => ({ sort: Math.random(), value: a }))
+    .sort((a, b) => a.sort - b.sort)
+    .map((a) => a.value);
+}
+
 
 export default function QuizScreen() {
-  // This is awesome this just automatically slaps these together and gives us a default value
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [graded, setGraded] = useState(false);
-  const [time, setTime] = useState(10);
+  const db = SQLite.useSQLiteContext(); 
 
-  const onClick = (index, ans) => {
-    // Updates selected answers
+  async function retrieveUserPoints(): Promise<number> {
+    type UserRow = { points: number };
+    const row = await db.getFirstAsync<UserRow>(
+      'SELECT points FROM users WHERE loggedIn = ?;',
+      [1]
+    );
+    return row?.points ?? 0;
+  }
+
+  async function updateUserPoints(points: number) {
+    await db.runAsync('UPDATE users SET points = ? WHERE loggedIn = ?', [points, 1]);
+  }
+
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
+  const [graded, setGraded] = useState(false);
+  const [time, setTime] = useState(30);
+  const [questions, setQuestions] = useState<
+    Array<{ question: string; correct_answer: string; incorrect_answers: string[]; all_answers: string[] }>
+  >([]);
+  const [quizStarted, setQuizStarted] = useState(false);
+
+  const onClick = (index: number, ans: string) => {
     setSelectedAnswers({ ...selectedAnswers, [index]: ans });
   };
 
-  // I don't know enough about react this feels like straight magic
-  // Might be better to define a struct or something to store these questions,
-  // but for now we're doing it inline baby (woo)
-  const [questions, setQuestions] = useState<Array<{ question: string; correct_answer: string; incorrect_answers: string[] }>
-  >([]);
-
-  // Straight googled how to do a timer I had no clue, this is the cleanest I could find
   useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("https://opentdb.com/api_category.php");
+        const json = await res.json();
+        const cats = json?.trivia_categories ?? [];
+        setCatOptions(cats.map(c => ({ key: c.id, label: c.name, payload: c })));
+        console.log(catOptions);
+      } catch (e) {
+        console.error("API error:", e);
+      } finally {
+      }
+    })();
+  }, []);
+
+  const [catOptions, setCatOptions] = useState([]);
+  const diffOptions = [
+    { key: "easy", label: "Easy" },
+    { key: "medium", label: "Medium" },
+    { key: "hard", label: "Hard" },
+  ];
+  const typeOptions = [
+    { key: "multiple", label: "Multiple Choice" },
+    { key: "boolean", label: "True / False" },
+  ];
+  const [which, setWhich] = useState(null);
+  const [category, setCategory] = useState(null);
+  const [difficulty, setDifficulty] = useState(null);
+  const [type, setType] = useState(null);
+
+  // Timer
+  useEffect(() => {
+    if (!quizStarted || graded) return;
     const timer = setInterval(() => {
-      setTime(prevTime => {
-        if (prevTime <= 0) {
+      setTime((prevTime) => {
+        if (prevTime <= 1) {
           setGraded(true);
+          clearInterval(timer);
           return 0;
         }
         return prevTime - 1;
       });
     }, 1000);
-  
+
     return () => clearInterval(timer);
-  }, []);
+  }, [quizStarted, graded]);
+
+  // Fetch questions when quiz starts
+  const startQuiz = async () => {
+    let questionResult = await fetch("https://opentdb.com/api.php?amount=4" + "&category=" + category.key + "&difficulty=" + difficulty.key + "&type=" + type.key);
+    let items = await questionResult.json();
+
+    let processed = items.results.map((q: any) => ({
+      ...q,
+      all_answers: shuffleArray([q.correct_answer, ...q.incorrect_answers]),
+    }));
+    setQuestions(processed);
+    setSelectedAnswers({});
+    setGraded(false);
+    setTime(30);
+    setQuizStarted(true);
+  };
+
+  // Score
+  const score = Object.keys(selectedAnswers).reduce((acc, idx) => {
+    const i = parseInt(idx);
+    if (selectedAnswers[i] === questions[i]?.correct_answer) {
+      return acc + 1;
+    }
+    return acc;
+  }, 0);
 
   useEffect(() => {
-    const fetchQuestion = async () => {
-      let questionResult = await fetch("https://opentdb.com/api.php?amount=3");
-      let items = await questionResult.json();
-      console.log("API response:", items);
-      setQuestions(items.results);
-    };
-
-    fetchQuestion();
-  }, []);
+    if (graded) {
+      (async () => {
+        const currentPoints = await retrieveUserPoints();
+        await updateUserPoints(currentPoints + score);
+      })();
+    }
+  }, [graded]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Quiz</Text>
-      <Text style={styles.subHeader}>{time}</Text>
-      {/* Handles if we're rate limited mainly */}
-      {!questions || questions.length === 0 ? (
-        <Text>Loading...</Text>
-      ) : (
-        // Puts all the questions down with the answer choices on pressable text
-        questions.map((q, index) => (
-          <View key={index}>
-          <Text style={styles.subHeader}>{q.question}</Text>
-          {[q.correct_answer, ...q.incorrect_answers].map((ans, ansIndex) => (
-            <Pressable
-              key={ansIndex}
-              onPress={() => !graded && onClick(index, ans)}
-              // I was originally going to put all the logic in my functions, but chat told
-              // me that was stupid (and helpfully gave me bad code for me to fix)
-              style={[
-                // Give blue highlight when you click an answer
-                !graded && selectedAnswers[index] === ans ? styles.selected : {},
-                // Green highlight on correct answer (even if you didn't select it, so you know what the right ans is)
-                graded && ans === q.correct_answer ? styles.correct : {},
-                // Highlight your answer red if you got it wrong
-                graded && selectedAnswers[index] === ans && ans !== q.correct_answer ? styles.incorrect : {},
-              ]}
-            >
-              <Text>{ans}</Text>
-            </Pressable>
-          ))}
+      <Text style={styles.header}>Quiz App</Text>
+
+      {!quizStarted ? (
+        <View style={styles.centerWrapper}>
+          <Text style={styles.header}>Select Stuff</Text>
+
+{/* Here we can just define the different things we're selecting and reuse the same modal for all of them */}
+{/* The category?.label ?? part puts the selected category on it once we pick one */}
+<Pressable style={styles.trigger} onPress={() => setWhich('category')}>
+  <Text>{category?.label ?? "Select a category"}</Text>
+</Pressable>
+
+<Pressable style={styles.trigger} onPress={() => setWhich('difficulty')}>
+  <Text>{difficulty?.label ?? "Select a difficulty"}</Text>
+</Pressable>
+
+<Pressable style={styles.trigger} onPress={() => setWhich('type')}>
+  <Text>{type?.label ?? "Select a type"}</Text>
+</Pressable>
+
+{/* General modal with clickable options,  */}
+          <Modal transparent visible={!!which} animationType="fade">
+            <View style={styles.overlay}>
+              <Pressable style={StyleSheet.absoluteFill} onPress={() => setWhich(null)} />
+              <View style={styles.menu}>
+                {(which === 'category' ? catOptions
+                  : which === 'difficulty' ? diffOptions
+                  : which === 'type' ? typeOptions
+                  : []
+                ).map((option) => (
+                  <Pressable
+                    key={String(option.key)}
+                    style={styles.option}
+                    onPress={() => {
+                      if (which === 'category') setCategory(option);
+                      else if (which === 'difficulty') setDifficulty(option);
+                      else if (which === 'type') setType(option);
+                      setWhich(null);
+                    }}
+                  >
+                    <Text numberOfLines={2}>{option.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </Modal>
+          <Button title="Take Test" onPress={startQuiz} />
         </View>
-        )))
-      }
-      <Button title="Grade Quiz"
-        onPress={() => {
-          setGraded(true);
-          console.log(selectedAnswers);
-        }}
-      />
+      ) : (
+        <>
+          <Text style={styles.timer}>⏳ {time}s</Text>
+
+          {!questions || questions.length === 0 ? (
+            <Text style={styles.loading}>Loading...</Text>
+          ) : (
+            <ScrollView>
+              {questions.map((q, index) => (
+                <View style={styles.card} key={index}>
+                  <Text style={styles.question}>
+                    {decodeHTMLEntities(q.question)}
+                  </Text>
+
+                  {q.all_answers.map((ans: string, ansIndex: number) => {
+                    const isSelected = selectedAnswers[index] === ans;
+                    const isCorrect = graded && ans === q.correct_answer;
+                    const isWrong =
+                      graded && isSelected && ans !== q.correct_answer;
+
+                    return (
+                      <Pressable
+                        key={ansIndex}
+                        onPress={() => !graded && onClick(index, ans)}
+                        style={[
+                          styles.answerBtn,
+                          isSelected && !graded ? styles.selected : null,
+                          isCorrect ? styles.correct : null,
+                          isWrong ? styles.incorrect : null,
+                        ]}
+                      >
+                        <Text style={styles.answerText}>
+                          {decodeHTMLEntities(ans)}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ))}
+            </ScrollView>
+          )}
+
+          {!graded ? (
+            <Button title="Grade Quiz" onPress={() => setGraded(true)} />
+          ) : (
+            <View style={styles.resultContainer}>
+              <Text style={styles.score}>
+                Your Score: {score}/{questions.length}
+              </Text>
+              <Button title="Play Again" onPress={() => setQuizStarted(false)} />
+            </View>
+          )}
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -90,84 +249,77 @@ export default function QuizScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0E2028', 
-    justifyContent: 'center',
-    padding: 24,
+    backgroundColor: "#0E2028",
+    padding: 20,
   },
   header: {
-    fontSize: 34,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'center',
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: 20,
   },
-  subHeader: {
+  timer: {
+    fontSize: 18,
+    color: "#ffdd57",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  loading: {
+    color: "#fff",
     fontSize: 16,
-    color: '#bbb',
-    textAlign: 'center',
-    marginBottom: 28,
+    textAlign: "center",
+    marginTop: 40,
   },
-  centerWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  formCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    width: '90%',
-    maxWidth: 360, 
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  inputWrapper: {
+  card: {
+    backgroundColor: "#1D3D47",
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 16,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: '#f7f7f7',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  button: {
-    backgroundColor: '#1D3D47',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  buttonText: {
+  question: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
+    marginBottom: 12,
   },
-  footerText: {
-    textAlign: 'center',
-    color: '#ccc',
-    marginTop: 20,
-    fontSize: 14,
+  answerBtn: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#2C4C55",
+    marginBottom: 10,
   },
-  footerLink: {
-    color: '#4DB6AC',
-    fontWeight: '600',
+  answerText: {
+    color: "#fff",
+    fontSize: 16,
   },
   selected: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
   },
   correct: {
-    backgroundColor: '#28a745',
+    backgroundColor: "#28a745",
   },
   incorrect: {
-    backgroundColor: '#dc3545',
+    backgroundColor: "#dc3545",
   },
+  resultContainer: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  score: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: 10,
+  },
+  centerWrapper: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  trigger: { padding: 12, backgroundColor: "#eee", borderRadius: 8 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.2)" },
+  dropdown: { flex: 1, justifyContent: "center", paddingHorizontal: 16 },
+  menu: { backgroundColor: "white", borderRadius: 8, overflow: "hidden" },
+  option: { padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#ddd" },
 });
