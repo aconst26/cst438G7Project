@@ -27,12 +27,13 @@ export default function SignUpScreen() {
   // This function will run all the logic that stores the information in the database.
   const handleSubmit = async () => {
     try {
-      if (!form.firstName || !form.lastName || !form.email || !form.password) {
+      if (!form.firstName || !form.lastName || !form.email || !form.password || !form.username) {
         throw new Error('All fields are required');
       }
       // Test case to make sure email isn't already in use.
       const existingUser = await db.getFirstAsync('SELECT email FROM users WHERE email = ?;', [form.email]);
-      if (existingUser) {
+      const existingUser2 = await db.getFirstAsync('SELECT username FROM users WHERE username = ?;', [form.username]);
+      if (existingUser || existingUser2) {
         setForm({
           firstName: '',
           lastName: '',
@@ -40,15 +41,14 @@ export default function SignUpScreen() {
           email: '',
           password: '',
         });
-        throw new Error('Email already in use. Please enter a different email.')
+        throw new Error('Email/Username already in use. Please enter a different email.')
       }
       // hash password for safety
       const hashedPassword = await hashPassword(form.password);
-      console.log(hashPassword);
       // Get information from form and store it in database.
       await db.runAsync(
-        'INSERT INTO users (firstName, lastName, username, email, password, points, loggedIn) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [form.firstName, form.lastName, form.username, form.email, hashedPassword, 0, 0]
+        'INSERT INTO users (firstName, lastName, username, email, password, points) VALUES (?, ?, ?, ?, ?, ?)',
+        [form.firstName, form.lastName, form.username, form.email, hashedPassword, 0]
       );
 
       Alert.alert('Success', 'User added successfully!');

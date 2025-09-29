@@ -12,7 +12,6 @@ async function hashPassword(password: string): Promise<string> {
     );
 }
 
-
 export default function Login() {
     const db = SQLite.useSQLiteContext();
     const[username, setUsername] = useState('');
@@ -35,17 +34,12 @@ export default function Login() {
                 Alert.alert('Login Failed', 'Incorrect username or password.');
                 return;
             }
-            await db.runAsync('UPDATE users SET loggedIn = ? WHERE username = ?;', [1, username]);
-            const user2 = await db.getFirstAsync(
-                'SELECT * FROM users WHERE username = ? AND password = ?;',
-                [username, hashedPassword]
-            );
-            console.log('Logged in user:', user2);
+            await AsyncStorage.clear();
             await AsyncStorage.setItem('loggedInUser', username); // Store logged in user
-            console.log('Logged in user:', user);
+            console.log('Logged in user:', username);
             setUsername('');
             setPassword('');
-            router.replace('/explore');
+            router.push('/explore');
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'An error occurred during login. Please try again.');
