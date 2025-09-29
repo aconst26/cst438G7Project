@@ -24,7 +24,7 @@ export default function RootLayout() {
       <SQLiteProvider
         databaseName="userDatabase.db"
         onInit={async (db) => {
-          // await db.execAsync(`DROP TABLE IF EXISTS users;`); useful for testing purposes
+          // await db.execAsync(`DROP TABLE IF EXISTS users;`); UNCOMMENT IF YOU MAKE A CHANGE TO DATABASE
           await db.execAsync(`
             CREATE TABLE IF NOT EXISTS users(
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,8 +33,7 @@ export default function RootLayout() {
               username TEXT NOT NULL UNIQUE,
               email TEXT NOT NULL UNIQUE,
               password TEXT NOT NULL,
-              points INTEGER,
-              loggedIn INTEGER NOT NULL
+              points INTEGER
             );
           `);
           await db.execAsync(`PRAGMA journal_mode = WAL;`);
