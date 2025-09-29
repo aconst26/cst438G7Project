@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from "@react-navigation/native";
 import * as SQLite from 'expo-sqlite';
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Button,
   Modal,
@@ -28,23 +30,20 @@ function shuffleArray(array: string[]) {
     .map((a) => a.value);
 }
 
-
 export default function QuizScreen() {
   const db = SQLite.useSQLiteContext(); 
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
 
-  async function retrieveUserPoints(): Promise<number> {
-    type UserRow = { points: number };
-    const row = await db.getFirstAsync<UserRow>(
-      'SELECT points FROM users WHERE loggedIn = ?;',
-      [1]
-    );
-    return row?.points ?? 0;
-  }
-
-  async function updateUserPoints(points: number) {
-    await db.runAsync('UPDATE users SET points = ? WHERE loggedIn = ?', [points, 1]);
-  }
-
+  useFocusEffect(
+    useCallback(() => {
+      const fetchCurrentUser = async () => {
+        const username = await AsyncStorage.getItem("loggedInUser");
+        setCurrentUsername(username);
+      };
+      fetchCurrentUser();
+    }, [])
+  );
+  
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [graded, setGraded] = useState(false);
   const [time, setTime] = useState(30);
@@ -57,21 +56,6 @@ export default function QuizScreen() {
     setSelectedAnswers({ ...selectedAnswers, [index]: ans });
   };
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("https://opentdb.com/api_category.php");
-        const json = await res.json();
-        const cats = json?.trivia_categories ?? [];
-        setCatOptions(cats.map(c => ({ key: c.id, label: c.name, payload: c })));
-        console.log(catOptions);
-      } catch (e) {
-        console.error("API error:", e);
-      } finally {
-      }
-    })();
-  }, []);
-
   const [catOptions, setCatOptions] = useState([]);
   const diffOptions = [
     { key: "easy", label: "Easy" },
@@ -82,10 +66,35 @@ export default function QuizScreen() {
     { key: "multiple", label: "Multiple Choice" },
     { key: "boolean", label: "True / False" },
   ];
-  const [which, setWhich] = useState(null);
-  const [category, setCategory] = useState(null);
-  const [difficulty, setDifficulty] = useState(null);
-  const [type, setType] = useState(null);
+  const [which, setWhich] = useState<null | 'category' | 'difficulty' | 'type'>(null);
+  const [category, setCategory] = useState<any>(null);
+  const [difficulty, setDifficulty] = useState<any>(null);
+  const [type, setType] = useState<any>(null);
+
+
+  // "Hard Coding A logout since it doesnt wannaa work????"
+  const resetQuizState = () => {
+    setSelectedAnswers({});
+    setGraded(false);
+    setTime(30);
+    setQuestions([]);
+    setQuizStarted(false);
+    setCategory(null);
+    setDifficulty(null);
+    setType(null);
+    setWhich(null);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      const initialize = async () => {
+        const username = await AsyncStorage.getItem("loggedInUser");
+        setCurrentUsername(username);
+        resetQuizState();
+      };
+      initialize();
+    }, [])
+  );
 
   // Timer
   useEffect(() => {
@@ -104,9 +113,27 @@ export default function QuizScreen() {
     return () => clearInterval(timer);
   }, [quizStarted, graded]);
 
+  // Fetch categories
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("https://opentdb.com/api_category.php");
+        const json = await res.json();
+        const cats = json?.trivia_categories ?? [];
+        setCatOptions(cats.map(c => ({ key: c.id, label: c.name, payload: c })));
+      } catch (e) {
+        console.error("API error:", e);
+      }
+    })();
+  }, []);
+
   // Fetch questions when quiz starts
   const startQuiz = async () => {
-    let questionResult = await fetch("https://opentdb.com/api.php?amount=4" + "&category=" + category.key + "&difficulty=" + difficulty.key + "&type=" + type.key);
+    if (!category || !difficulty || !type) return;
+
+    let questionResult = await fetch(
+      `https://opentdb.com/api.php?amount=4&category=${category.key}&difficulty=${difficulty.key}&type=${type.key}`
+    );
     let items = await questionResult.json();
 
     let processed = items.results.map((q: any) => ({
@@ -121,71 +148,82 @@ export default function QuizScreen() {
   };
 
   // Score
-  const score = Object.keys(selectedAnswers).reduce((acc, idx) => {
-    const i = parseInt(idx);
-    if (selectedAnswers[i] === questions[i]?.correct_answer) {
-      return acc + 1;
-    }
-    return acc;
-  }, 0);
+  const score = Object.entries(selectedAnswers).filter(
+    ([idx, ans]) => ans === questions[Number(idx)]?.correct_answer
+  ).length;  
 
+  // Update user points when graded
   useEffect(() => {
     if (graded) {
       (async () => {
-        const currentPoints = await retrieveUserPoints();
-        await updateUserPoints(currentPoints + score);
+        console.log(currentUsername);
+        await db.runAsync(
+          'UPDATE users SET points = points + ? WHERE username = ?;',
+          [score, currentUsername]
+      );
       })();
     }
   }, [graded]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>Quiz App</Text>
+      <Text style={styles.header}>Quiz Page</Text>
 
       {!quizStarted ? (
         <View style={styles.centerWrapper}>
-          <Text style={styles.header}>Select Stuff</Text>
+          <Text style={styles.header}>Select Your Quiz</Text>
+          {/* Here we can just define the different things we're selecting and reuse the same modal for all of them */}
+          {/* The category?.label ?? part puts the selected category on it once we pick one */}
+          {/* Category / Difficulty / Type */}
+          <Pressable style={[styles.trigger, category && styles.selectedTrigger]} onPress={() => setWhich('category')}>
+            <Text style={styles.triggerText}>{category?.label ?? "Select a Category"}</Text>
+          </Pressable>
 
-{/* Here we can just define the different things we're selecting and reuse the same modal for all of them */}
-{/* The category?.label ?? part puts the selected category on it once we pick one */}
-<Pressable style={styles.trigger} onPress={() => setWhich('category')}>
-  <Text>{category?.label ?? "Select a category"}</Text>
-</Pressable>
+          <Pressable style={[styles.trigger, difficulty && styles.selectedTrigger]} onPress={() => setWhich('difficulty')}>
+            <Text style={styles.triggerText}>{difficulty?.label ?? "Select Difficulty"}</Text>
+          </Pressable>
 
-<Pressable style={styles.trigger} onPress={() => setWhich('difficulty')}>
-  <Text>{difficulty?.label ?? "Select a difficulty"}</Text>
-</Pressable>
+          <Pressable style={[styles.trigger, type && styles.selectedTrigger]} onPress={() => setWhich('type')}>
+            <Text style={styles.triggerText}>{type?.label ?? "Select Type"}</Text>
+          </Pressable>
 
-<Pressable style={styles.trigger} onPress={() => setWhich('type')}>
-  <Text>{type?.label ?? "Select a type"}</Text>
-</Pressable>
-
-{/* General modal with clickable options,  */}
+          {/* General modal with clickable options,  */}
           <Modal transparent visible={!!which} animationType="fade">
             <View style={styles.overlay}>
               <Pressable style={StyleSheet.absoluteFill} onPress={() => setWhich(null)} />
               <View style={styles.menu}>
-                {(which === 'category' ? catOptions
-                  : which === 'difficulty' ? diffOptions
-                  : which === 'type' ? typeOptions
-                  : []
-                ).map((option) => (
-                  <Pressable
-                    key={String(option.key)}
-                    style={styles.option}
-                    onPress={() => {
-                      if (which === 'category') setCategory(option);
-                      else if (which === 'difficulty') setDifficulty(option);
-                      else if (which === 'type') setType(option);
-                      setWhich(null);
-                    }}
-                  >
-                    <Text numberOfLines={2}>{option.label}</Text>
-                  </Pressable>
-                ))}
+                <ScrollView contentContainerStyle={{ paddingVertical: 8 }}>
+                  {(which === 'category' ? catOptions
+                    : which === 'difficulty' ? diffOptions
+                    : which === 'type' ? typeOptions
+                    : []
+                  ).map((option) => (
+                    <Pressable
+                      key={String(option.key)}
+                      style={({ pressed }) => [
+                        styles.option,
+                        pressed && { backgroundColor: "#007AFF33" },
+                        (which === 'category' && category?.key === option.key) ||
+                        (which === 'difficulty' && difficulty?.key === option.key) ||
+                        (which === 'type' && type?.key === option.key)
+                          ? styles.optionSelected
+                          : null,
+                      ]}
+                      onPress={() => {
+                        if (which === 'category') setCategory(option);
+                        else if (which === 'difficulty') setDifficulty(option);
+                        else if (which === 'type') setType(option);
+                        setWhich(null);
+                      }}
+                    >
+                      <Text style={styles.optionText}>{option.label}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
               </View>
             </View>
           </Modal>
+
           <Button title="Take Test" onPress={startQuiz} />
         </View>
       ) : (
@@ -317,9 +355,54 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  trigger: { padding: 12, backgroundColor: "#eee", borderRadius: 8 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.2)" },
-  dropdown: { flex: 1, justifyContent: "center", paddingHorizontal: 16 },
-  menu: { backgroundColor: "white", borderRadius: 8, overflow: "hidden" },
-  option: { padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#ddd" },
+  trigger: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    backgroundColor: "#1D3D47",
+    borderRadius: 24,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  selectedTrigger: {
+    backgroundColor: "#007AFF",
+  },
+  triggerText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+  },
+  menu: {
+    backgroundColor: "#1D3D47",
+    marginHorizontal: 40,
+    borderRadius: 12,
+    paddingVertical: 8,
+    maxHeight: "50%",
+  },
+  option: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#007AFF66",
+    borderRadius: 8,
+    marginHorizontal: 8,
+    marginVertical: 4,
+  },
+  optionSelected: {
+    backgroundColor: "#007AFF",
+  },
+  optionText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "500",
+  },
 });
