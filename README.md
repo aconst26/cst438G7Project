@@ -109,15 +109,24 @@ I was responsible for implementing the login system and the Daily Trivia feature
 
    [Get Questions from Selected Criteria from the Previous Page](https://github.com/aconst26/cst438G7Project/issues/16)
 
+   [Admin page](https://github.com/aconst26/cst438G7Project/issues/7)
+
 ### What was your role / which stories did you work on
+I was responsible for the quiz page, including selecting quiz categories and other options on a separate page, and the admin page, which handles setting the daily question and ensuring that daily questions are consistent across users.
 
 + What was the biggest challenge?
+  Easily the biggest challenge was implementing the option selection for the quiz page.
 + Why was it a challenge?
+  While I have a lot of experience working with API's, particularly from Internet Programming, I have little to no experience with React. It was very difficult for me to pull info from the API, then use that to populate menus, then use user selections to make another API request.
    + How was the challenge addressed?
+     I ended up researching a lot of different ways this could be done and slowly improving my approach. I talked with some friends, and my teammates, about which approach would work best for our project.
 + Favorite / most interesting part of this project
+  The most interesting part for me was learning React. A while back I had an interview for an internship that went poorly because they really wanted someone comfortable with React (and I was not). It was really satisfying to fill a hole in my coding knowledge in an area that was personally interesting.
 + If you could do it over, what would you change?
+  I would go in with more unit tests, complete database setups, and a better feel for the API early on. I think I would have saved myself a lot of headaches if I got a better feel for everything before I tried to code it.
+  I would also make a lot more commits, I sort of completed an issue -> committed my work -> pushed -> made a PR all at once most of the time, and I think a more step by step process would have worked a lot better.
 + What is the most valuable thing you learned?
-
+  Definitely working with React Native in general, especially how to do a lot of tasks that I understood in other mediums. Working with API's and databases and facilitating users and keeping the same experience across multiple users was really difficult for me to get right, but feel like skills that will help me a lot in the future.
 
 ## Conclusion
 + How Successful Was the Project?
