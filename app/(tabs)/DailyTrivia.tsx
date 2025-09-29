@@ -14,6 +14,7 @@ export default function DailyTrivia() {
   const [feedback, setFeedback] = useState('');
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Fetch current user
   useFocusEffect(
@@ -21,6 +22,13 @@ export default function DailyTrivia() {
       const fetchCurrentUser = async () => {
         const username = await AsyncStorage.getItem("loggedInUser");
         setCurrentUsername(username);
+        if (username) {
+            const user: any = await db.getFirstAsync(
+              `SELECT isAdmin FROM users WHERE username = ?`,
+              [username]
+            );
+            setIsAdmin(user?.isAdmin === 1);
+          }
       };
       fetchCurrentUser();
     }, [])
@@ -260,9 +268,11 @@ export default function DailyTrivia() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={() => router.push("/dashboard")}>
-        <Text style={styles.buttonText}>Admin Page</Text>
-    </TouchableOpacity>
+      {isAdmin && (
+        <TouchableOpacity style={styles.button} onPress={() => router.push("/dashboard")}>
+            <Text style={styles.buttonText}>Admin Page</Text>
+        </TouchableOpacity>
+        )}
       <Text style={styles.title}>Question of the Day</Text>
       <Text style={styles.timer}>Next question in: {timeLeft}</Text>
       <Text style={styles.question}>{questionData.question}</Text>
