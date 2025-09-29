@@ -43,13 +43,19 @@ We completed 14 stories
    [Finished Backend for Signup Page](https://github.com/aconst26/cst438G7Project/issues/13)
 
 ### What was your role / which stories did you work on
-
+My role was to work on the frontend and backend of the signup page and leaderboards section. I also had the role to make the finishing touches on the application and make sure all functionality works as expected/wanted.
 + What was the biggest challenge?
+  The biggest challenge was definitely getting started/setting up the app with the necessary files.
 + Why was it a challenge?
+  With no experience in React Native I was extremely overwhelmed and had no idea where to start or how to even get the app running. Even after watching videos I still somehow ended up with a completely wrong app foundation.
    + How was the challenge addressed?
+     Challenge was addressed by asking for help from other friends and eventually I had my app foundation started.
 + Favorite / most interesting part of this project
+  Favorite part of this project was collaborating with my teammates, I was lucky to have some very amazing teammates.
 + If you could do it over, what would you change?
+  I would commit even more time to the project. Even though the project came out somewhat okay/better than expected I do wish I would have put in more effort.
 + What is the most valuable thing you learned?
+  The most valuable thing I learned was how databases work with React Native Apps. A little bit tricky but there is some extremely useful information that can be applied to any upcoming project.
 
 ### Athena Lopez
 1) Athena’s Pull Request:
