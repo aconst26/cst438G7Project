@@ -1,16 +1,15 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SQLite from "expo-sqlite";
 import { useState } from 'react';
 import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function AdminScreen() {
   const [form, setForm] = useState({
-    date: '',
     question: '',
     answer: '',
     incorrect1: '',
     incorrect2: '',
     incorrect3: '',
-    incorrect4: '',
   });
 
   const db = SQLite.useSQLiteContext();
@@ -18,24 +17,23 @@ export default function AdminScreen() {
   // This function will run all the logic that stores the information in the database.
   const handleSubmit = async () => {
     try {
-      if (!form.date || !form.question || !form.answer || !form.incorrect1) {
+      if (!form.question || !form.answer || !form.incorrect1 || !form.incorrect2 || !form.incorrect3) {
         throw new Error('Please complete question input');
       }
       // Get information from form and store it in database.
       await db.runAsync(
-        'INSERT INTO dailyQuestions (date, question, answer, incorrect1, incorrect2, incorrect3, incorrect4) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [form.date, form.question, form.answer, form.incorrect1, form.incorrect2, form.incorrect3, form.incorrect4]
+        'INSERT INTO dailyQuestions (question, answer, incorrect1, incorrect2, incorrect3) VALUES (?, ?, ?, ?, ?)',
+        [form.question, form.answer, form.incorrect1, form.incorrect2, form.incorrect3] // got it ???
       );
+      await AsyncStorage.setItem('newDailyQuestion', 'true');
 
       Alert.alert('Success', 'Question added successfully!');
       setForm({
-        date: '',
         question: '',
         answer: '',
         incorrect1: '',
         incorrect2: '',
         incorrect3: '',
-        incorrect4: '',
       });
     } catch (error) {
       console.log(error)
@@ -43,22 +41,34 @@ export default function AdminScreen() {
     }
   };
 
+  const handleRandom = async () => {
+    try {
+      // Delete all questions in the table
+      await db.runAsync('DELETE FROM dailyQuestions;');
+      await db.runAsync('DELETE FROM sqlite_sequence WHERE name="dailyQuestions";');
+  
+      setForm({
+        question: '',
+        answer: '',
+        incorrect1: '',
+        incorrect2: '',
+        incorrect3: '',
+      });
+  
+      Alert.alert('Success', 'All questions cleared!');
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error clearing questions: ' + error);
+    }
+  };  
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Hello Admin</Text>
-      <Text style={styles.subHeader}>Create Daily Question</Text>
+      <Text style={styles.subHeader}>Set Daily Question</Text>
 
       <View style={styles.centerWrapper}>
         <View style={styles.formCard}>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Date</Text>
-            <TextInput
-              style={styles.input}
-              value={form.date}
-              onChangeText={(text) => setForm({ ...form, date: text })}
-            />
-          </View>
-
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Question</Text>
             <TextInput
@@ -69,7 +79,7 @@ export default function AdminScreen() {
           </View>
 
           <View style ={styles.inputWrapper}>
-            <Text style={styles.label}>Answer</Text>
+            <Text style={styles.label}>Right Answer</Text>
             <TextInput
               style={styles.input}
               value={form.answer}
@@ -78,47 +88,36 @@ export default function AdminScreen() {
           </View>
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Incorrect 1</Text>
+            <Text style={styles.label}>Incorrect Choice 1</Text>
             <TextInput
               style={styles.input}
-              keyboardType="email-address"
               value={form.incorrect1}
               onChangeText={(text) => setForm({ ...form, incorrect1: text })}
             />
           </View>
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Incorrect 2</Text>
+            <Text style={styles.label}>Incorrect Choice 2</Text>
             <TextInput
               style={styles.input}
-              secureTextEntry
               value={form.incorrect2}
               onChangeText={(text) => setForm({ ...form, incorrect2: text })}
             />
           </View>
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Incorrect 2</Text>
+            <Text style={styles.label}>Incorrect Choice 3</Text>
             <TextInput
               style={styles.input}
-              secureTextEntry
-              value={form.incorrect2}
+              value={form.incorrect3}
               onChangeText={(text) => setForm({ ...form, incorrect3: text })}
             />
           </View>
-
-          <View style={styles.inputWrapper}>
-            <Text style={styles.label}>Incorrect 2</Text>
-            <TextInput
-              style={styles.input}
-              secureTextEntry
-              value={form.incorrect2}
-              onChangeText={(text) => setForm({ ...form, incorrect4: text })}
-            />
-          </View>
-
           <TouchableOpacity style={styles.button} onPress={handleSubmit}>
             <Text style={styles.buttonText}>Create</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={handleRandom}>
+            <Text style={styles.buttonText}>Random</Text>
           </TouchableOpacity>
         </View>
       </View>

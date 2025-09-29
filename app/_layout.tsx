@@ -36,6 +36,15 @@ export default function RootLayout() {
               points INTEGER
             );
           `);
+          await db.execAsync(`
+            CREATE TABLE IF NOT EXISTS dailyQuestions(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question TEXT NOT NULL,
+            answer TEXT NOT NULL,
+            incorrect1 TEXT NOT NULL,
+            incorrect2 TEXT NOT NULL,
+            incorrect3 TEXT NOT NULL
+            );`)
           await db.execAsync(`PRAGMA journal_mode = WAL;`);
         }}
         options={{ useNewConnection: false }}
