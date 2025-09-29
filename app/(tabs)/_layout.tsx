@@ -48,6 +48,7 @@ export default function TabLayout() {
           tabBarStyle: { display: 'none' },  // hides the bottom tab bar
         }}
       />
+      <Tabs.Screen name="dashboard" options={{ title: "dashboard" }} />
     </Tabs>
     
   );

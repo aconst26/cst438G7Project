@@ -1,8 +1,9 @@
-import { decode } from 'html-entities';
-import * as SQlite from 'expo-sqlite';
-import React, {useEffect, useState} from 'react';
-import {Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import AsynStorage from '@react-native-async-storage/async-storage';
+import { router } from "expo-router";
+import * as SQlite from 'expo-sqlite';
+import { decode } from 'html-entities';
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, SafeAreaView, StyleSheet, Text, TouchableOpacity } from "react-native";
 
 export default function DailyTrivia() {
     const db = SQlite.useSQLiteContext();
@@ -28,34 +29,80 @@ export default function DailyTrivia() {
         fetchCurrentUser();
     }, []); //get current logged in user
 
+    function getToday(d: Date) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+    }
+  
     const fetchDailyQuestion = async (retryCount: number = 0) => {
-        try{
-            const response = await fetch("https://opentdb.com/api.php?amount=1&type=multiple");
-                let data = await response.json();
-                if(!data.results || data.results.length === 0) {
-                    throw new Error("No questions available");
-                }
+        try {
+        const today = getToday(new Date());
 
-                const dailyQuestion = data.results[0];
-                const answers = [...dailyQuestion.incorrect_answers, dailyQuestion.correct_answer];
-                setQuestionData({
-                    question: decode(dailyQuestion.question),
-                    correct_answer: decode(dailyQuestion.correct_answer),
-                    incorrect_answers: dailyQuestion.incorrect_answers.map((ans: string) => decode(ans)),
-                    answers: answers.map((ans)=>decode(ans)),
-                    difficulty: dailyQuestion.difficulty
-                });
-        } catch (error){
-            console.error("Error fetching question:", error);
-            if (retryCount < 3) {
-                    console.log(`Retrying... (${retryCount + 1})`);
-                    setTimeout(() => {
-                        fetchDailyQuestion(retryCount + 1);
-                    }, 1000);
-                } else {
-                    Alert.alert("Error", "Failed to load trivia question after multiple attempts.");
-                }
-            }
+        // Pull today's daily question from database
+        const row = await db.getFirstAsync(
+            `select question, answer, incorrect1, incorrect2, incorrect3
+            from dailyQuestions
+            where date = ?`,
+            [today]
+        );
+
+        // Set our question data
+        if (row) {
+            const incorrects = [row.incorrect1, row.incorrect2, row.incorrect3]
+            .filter((x) => x && String(x).trim().length) as string[];
+            const answers = [...incorrects, row.answer];
+
+            setQuestionData({
+            question: row.question,
+            correct_answer: row.answer,
+            incorrect_answers: incorrects,
+            answers,
+            difficulty: 'hard'
+            });
+            return;
+        }
+
+        // Otherwise we default back to 
+        const response = await fetch("https://opentdb.com/api.php?amount=1&type=multiple");
+        let data = await response.json();
+        if(!data.results || data.results.length === 0) {
+            throw new Error("No questions available");
+        }
+        const dailyQuestion = data.results[0];
+        const answers = [...dailyQuestion.incorrect_answers, dailyQuestion.correct_answer];
+        
+        setQuestionData({
+            question: decode(dailyQuestion.question),
+            correct_answer: decode(dailyQuestion.correct_answer),
+            incorrect_answers: dailyQuestion.incorrect_answers.map((ans: string) => decode(ans)),
+            answers: answers.map((ans)=>decode(ans)),
+            difficulty: dailyQuestion.difficulty
+        });
+
+        // Store our random question in database, so everyone will get that one
+        await db.runAsync(
+            `insert into dailyQuestions (date, question, answer, incorrect1, incorrect2, incorrect3)
+            values (?, ?, ?, ?, ?, ?)
+            on conflict(date) do update set
+            question = excluded.question,
+            answer = excluded.answer,
+            incorrect1 = excluded.incorrect1,
+            incorrect2 = excluded.incorrect2,
+            incorrect3 = excluded.incorrect3`,
+            [today, question, correct, incorrects[0] || "—", incorrects[1] || null, incorrects[2] || null]
+        );
+  
+        } catch (error) {
+        console.error("Error fetching question:", error);
+        if (retryCount < 3) {
+            console.log(`Retrying... (${retryCount + 1})`);
+            setTimeout(() => fetchDailyQuestion(retryCount + 1), 1000);
+        } else {
+            Alert.alert("Error", "Failed to load trivia question after multiple attempts.");
+        }
+        }
     };
 
     useEffect(() => {
@@ -106,6 +153,9 @@ export default function DailyTrivia() {
     }
     return (
         <SafeAreaView style={styles.container}>
+            <Pressable onPress={() => router.push("/dashboard")}>
+                <Text>Admin</Text>
+            </Pressable>
             <Text style={styles.title}>Question of the Day</Text>
             <Text style={styles.question}>{questionData.question}</Text>
             {questionData.answers.map((ans, index) => (
