@@ -19,7 +19,7 @@ export default function Logout() {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#fff" />
+      <ActivityIndicator testID="activity-indicator" size="large" color="#fff" />
     </View>
   );
 }

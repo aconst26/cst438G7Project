@@ -55,6 +55,7 @@ export default function Login() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Username</Text>
             <TextInput
+            testID="usernameInput"
             style={styles.input}
             value={username}
             onChangeText={setUsername}
@@ -64,6 +65,7 @@ export default function Login() {
         <View style={styles.inputWrapper}>
             <Text style={styles.label}>Password</Text>
             <TextInput
+            testID="passwordInput"
             style={styles.input}
             value={password}
             onChangeText={setPassword}

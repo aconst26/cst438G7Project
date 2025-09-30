@@ -72,6 +72,7 @@ export default function AdminScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Question</Text>
             <TextInput
+              testID="input-question"
               style={styles.input}
               value={form.question}
               onChangeText={(text) => setForm({ ...form, question: text })}
@@ -81,6 +82,7 @@ export default function AdminScreen() {
           <View style ={styles.inputWrapper}>
             <Text style={styles.label}>Right Answer</Text>
             <TextInput
+              testID="input-answer"
               style={styles.input}
               value={form.answer}
               onChangeText={(text) => setForm({ ...form, answer: text })}
@@ -90,6 +92,7 @@ export default function AdminScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Incorrect Choice 1</Text>
             <TextInput
+              testID="input-incorrect1"
               style={styles.input}
               value={form.incorrect1}
               onChangeText={(text) => setForm({ ...form, incorrect1: text })}
@@ -99,6 +102,7 @@ export default function AdminScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Incorrect Choice 2</Text>
             <TextInput
+              testID="input-incorrect2"
               style={styles.input}
               value={form.incorrect2}
               onChangeText={(text) => setForm({ ...form, incorrect2: text })}
@@ -108,6 +112,7 @@ export default function AdminScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Incorrect Choice 3</Text>
             <TextInput
+              testID="input-incorrect3"
               style={styles.input}
               value={form.incorrect3}
               onChangeText={(text) => setForm({ ...form, incorrect3: text })}
