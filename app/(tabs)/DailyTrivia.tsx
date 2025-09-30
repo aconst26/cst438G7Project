@@ -221,7 +221,11 @@ export default function DailyTrivia() {
       {questionData.answers.map((ans, index) => (
         <TouchableOpacity
           key={index}
-          style={[styles.answerButton, selectedAnswer === ans && styles.selected]}
+          style={[
+            styles.answerButton,
+            questionData?.correct_answer === ans && styles.correct,
+            selectedAnswer === ans && questionData?.correct_answer !== ans && styles.incorrect,
+          ]}
           onPress={() => handleAnswer(ans)}
           disabled={hasAnswered}
         >
@@ -295,5 +299,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     textTransform: 'uppercase',          
     letterSpacing: 1,                   
+  },
+  correct: {
+    backgroundColor: "#28a745",
+  },
+  incorrect: {
+    backgroundColor: "#dc3545",
   },
 });
