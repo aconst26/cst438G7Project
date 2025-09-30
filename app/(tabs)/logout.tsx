@@ -1,22 +1,21 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
-import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
+import React, { useCallback } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+
+
 export default function Logout() {
   const router = useRouter();
 
-  useEffect(() => {
-    const logoutUser = async () => {
-      try {
-        await AsyncStorage.clear();
-        router.replace("/"); 
-      } catch (err) {
-        console.error("Error logging out:", err);
-        Alert.alert("Logout Error", "Something went wrong while logging out.");
-      }
-    };
-    logoutUser();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        await AsyncStorage.removeItem("loggedInUser");
+        router.replace("/");
+      })();
+    }, [router])
+  );
 
   return (
     <View style={styles.container}>

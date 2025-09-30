@@ -94,60 +94,6 @@ export default function DailyTrivia() {
       return null;
     }
   };
-  
-
-  // DB First otherwise falllback to API
-  const loadQuestion = async () => {
-    try {
-      const dbQuestion: any = await db.getFirstAsync(
-        `SELECT question, answer, incorrect1, incorrect2, incorrect3 
-         FROM dailyQuestions ORDER BY id DESC LIMIT 1;`
-      );
-  
-      if (dbQuestion) {
-        const answers = shuffleArray([ // two shuffles yet it doesn't shuffle???
-          dbQuestion.answer,
-          dbQuestion.incorrect1,
-          dbQuestion.incorrect2,
-          dbQuestion.incorrect3
-        ].filter(Boolean));
-  
-        setQuestionData({
-          question: dbQuestion.question,
-          correct_answer: dbQuestion.answer,
-          incorrect_answers: [dbQuestion.incorrect1, dbQuestion.incorrect2, dbQuestion.incorrect3],
-          answers: shuffleArray(answers), 
-          difficulty: "medium" 
-        });
-        return;
-      }
-  
-      const response = await fetch("https://opentdb.com/api.php?amount=1&type=multiple");
-      const data = await response.json();
-      if (!data.results || data.results.length === 0) throw new Error("No questions available");
-  
-      const dailyQuestion = data.results[0];
-      const questionText = decode(dailyQuestion.question);
-      const correctAnswer = decode(dailyQuestion.correct_answer);
-      const incorrectAnswers = dailyQuestion.incorrect_answers.map(ans => decode(ans));
-  
-      await db.runAsync(
-        `INSERT INTO dailyQuestions (question, answer, incorrect1, incorrect2, incorrect3) 
-         VALUES (?, ?, ?, ?, ?)`,
-        [questionText, correctAnswer, incorrectAnswers[0], incorrectAnswers[1], incorrectAnswers[2]]
-      );
-  
-      setQuestionData({
-        question: questionText,
-        correct_answer: correctAnswer,
-        incorrect_answers: incorrectAnswers,
-        answers: shuffleArray([correctAnswer, ...incorrectAnswers])
-      });
-  
-    } catch (error) {
-      console.error("Error loading question:", error);
-    }
-  };
 
   const shuffleArray = (array: string[]) => {
     return array
@@ -216,10 +162,6 @@ export default function DailyTrivia() {
       setFeedback(`Maybe next time. The correct answer was: ${questionData.correct_answer}`);
     }
   };
-
-  useEffect(() => {
-    loadQuestion();
-  }, [currentUsername]);
 
   useFocusEffect(
     useCallback(() => {
