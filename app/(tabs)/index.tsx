@@ -75,6 +75,7 @@ export default function SignUpScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>First Name</Text>
             <TextInput
+              testID="firstNameInput"
               style={styles.input}
               value={form.firstName}
               onChangeText={(text) => setForm({ ...form, firstName: text })}
@@ -84,6 +85,7 @@ export default function SignUpScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Last Name</Text>
             <TextInput
+              testID="lastNameInput"
               style={styles.input}
               value={form.lastName}
               onChangeText={(text) => setForm({ ...form, lastName: text })}
@@ -93,6 +95,7 @@ export default function SignUpScreen() {
           <View style ={styles.inputWrapper}>
             <Text style={styles.label}>Username</Text>
             <TextInput
+              testID="usernameInput"
               style={styles.input}
               value={form.username}
               onChangeText={(text) => setForm({ ...form, username: text })}
@@ -102,6 +105,7 @@ export default function SignUpScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Email</Text>
             <TextInput
+              testID="emailInput"
               style={styles.input}
               keyboardType="email-address"
               value={form.email}
@@ -112,6 +116,7 @@ export default function SignUpScreen() {
           <View style={styles.inputWrapper}>
             <Text style={styles.label}>Password</Text>
             <TextInput
+              testID="passwordInput"
               style={styles.input}
               secureTextEntry
               value={form.password}
