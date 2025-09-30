@@ -223,7 +223,7 @@ export default function DailyTrivia() {
           key={index}
           style={[
             styles.answerButton,
-            questionData?.correct_answer === ans && styles.correct,
+            selectedAnswer && questionData?.correct_answer === ans && styles.correct,
             selectedAnswer === ans && questionData?.correct_answer !== ans && styles.incorrect,
           ]}
           onPress={() => handleAnswer(ans)}
