@@ -163,6 +163,12 @@ export default function DailyTrivia() {
     }
   };
 
+  const resetAllAnswers = async () => {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const answerKeys = allKeys.filter(key => key.startsWith('answered_'));
+    await AsyncStorage.multiRemove(answerKeys);
+  };
+
   useFocusEffect(
     useCallback(() => {
       const checkNewQuestion = async () => {
@@ -170,8 +176,10 @@ export default function DailyTrivia() {
         let latestQuestion = await getQuestionFromDB();
   
         if (!latestQuestion) {
+          await resetAllAnswers();
           latestQuestion = await fetchDailyQuestion();
         } else if (newQuestionFlag) {
+          await resetAllAnswers();
           latestQuestion = await getQuestionFromDB();
           await AsyncStorage.removeItem('newDailyQuestion');
         }
