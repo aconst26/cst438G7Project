@@ -34,7 +34,6 @@ export default function Login() {
                 Alert.alert('Login Failed', 'Incorrect username or password.');
                 return;
             }
-            await AsyncStorage.clear();
             await AsyncStorage.setItem('loggedInUser', username); // Store logged in user
             console.log('Logged in user:', username);
             setUsername('');
